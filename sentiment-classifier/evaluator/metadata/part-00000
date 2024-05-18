@@ -1,0 +1,1 @@
+{"class":"org.apache.spark.ml.evaluation.BinaryClassificationEvaluator","timestamp":1715445031536,"sparkVersion":"2.4.0","uid":"binEval_09759746d71d","paramMap":{"labelCol":"Sentiment","rawPredictionCol":"prediction"},"defaultParamMap":{"labelCol":"label","rawPredictionCol":"rawPrediction","metricName":"areaUnderROC"}}
