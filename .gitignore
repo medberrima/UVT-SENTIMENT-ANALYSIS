@@ -1,0 +1,30 @@
+# Scala
+*.class
+*.log
+*.tlog
+*.i
+*.ipr
+*.iws
+*.swp
+*~
+/target/
+.project
+.classpath
+.settings/
+.cache
+.history
+.scala_dependencies
+.project
+
+# sbt specific
+.cache/
+.lib/
+.history/
+.target/
+dist/
+src_managed/
+ivy.xml
+ivy2/
+
+
+sentiment-classifier/
