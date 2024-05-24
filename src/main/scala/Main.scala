@@ -1,6 +1,5 @@
 import java.util.Locale
 
-// Importing required Spark libraries
 import org.apache.log4j.Logger
 import org.apache.log4j.Level
 import org.apache.spark.ml.Pipeline
@@ -12,8 +11,13 @@ import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
 import org.apache.spark.sql.types.IntegerType
+import org.jfree.chart.ChartFactory
+import org.jfree.chart.ChartPanel
+import org.jfree.chart.plot.PlotOrientation
+import org.jfree.data.category.DefaultCategoryDataset
+import javax.swing.{JFrame, WindowConstants}
 
-object SentimentTrainer {
+object TwitterSentimentAnalysis  {
   def main(args: Array[String]) {
 
     // Printing application name
@@ -177,36 +181,9 @@ object SentimentTrainer {
       .select("ItemID","Preprocessed", "probability", "prediction")
       .collect()
 
-    // ANSI color codes
-    val ANSI_RESET = "\u001B[0m"
-    val ANSI_BOLD = "\u001B[1m"
-    val ANSI_RED = "\u001B[31m" // Red color for "Négatif"
-    val ANSI_GREEN = "\u001B[32m" // Green color for "Positif"
+    // printPredictions(predictions)
 
-    println("\nPredictions:")
-    predictions.foreach { row =>
-      val itemID = row.getAs[String]("ItemID")
-      val preprocessed = row.getAs[String]("Preprocessed")
-      val probability = row.getAs[org.apache.spark.ml.linalg.Vector]("probability")
-      val prediction = row.getAs[Double]("prediction")
-
-      // Convert probabilities to percentage and format them
-      val formattedProbability = probability.toArray.map(p => f"${p * 100}%.2f%%")
-
-      // Interpret the prediction using labels
-      val predictionLabel = if (prediction == 1.0) s"${ANSI_GREEN}Positif${ANSI_RESET}" else s"${ANSI_RED}Négatif${ANSI_RESET}"
-
-      // Construct probability message with colors
-      val probabilityMessage = s"${ANSI_BOLD}Probabilité Positif:${ANSI_RESET} ${formattedProbability(1)}, ${ANSI_BOLD}Négatif:${ANSI_RESET} ${formattedProbability(0)}"
-
-      println(s"${ANSI_BOLD}ItemID:${ANSI_RESET} $itemID")
-      println(s"${ANSI_BOLD}Texte prétraité:${ANSI_RESET} $preprocessed")
-      println(probabilityMessage)
-      println(s"${ANSI_BOLD}Prédiction:${ANSI_RESET} $predictionLabel")
-      println()
-    }
-
-
+    // generateSentimentDistributionChart(predictions)
 
 
     println("---------------------------------")
@@ -227,8 +204,7 @@ object SentimentTrainer {
 
     // Writing the model to disk
     println("Writing the model to disk...")
-    cvmodel.write.overwrite().save("sentiment-classifier")
-
+    cvmodel.write.overwrite().save("twitter-sentiment-model")
 
   }
 
@@ -256,4 +232,74 @@ object SentimentTrainer {
       .withColumn("Sentiment",label)
       .select("ItemID","Sentiment","Preprocessed")
   }
+
+  def printPredictions(predictions: Array[org.apache.spark.sql.Row]): Unit = {
+    // ANSI color codes
+    val ANSI_RESET = "\u001B[0m"
+    val ANSI_BOLD = "\u001B[1m"
+    val ANSI_RED = "\u001B[31m" // Red color for "Négatif"
+    val ANSI_GREEN = "\u001B[32m" // Green color for "Positif"
+
+    println("\nPredictions:")
+    predictions.foreach { row =>
+      val itemID = row.getAs[String]("ItemID")
+      val preprocessed = row.getAs[String]("Preprocessed")
+      val probability = row.getAs[org.apache.spark.ml.linalg.Vector]("probability")
+      val prediction = row.getAs[Double]("prediction")
+
+      // Convert probabilities to percentage and format them
+      val formattedProbability = probability.toArray.map(p => f"${p * 100}%.2f%%")
+
+      // Interpret the prediction using labels
+      val predictionLabel = if (prediction == 1.0) s"${ANSI_GREEN}Positif 😁${ANSI_RESET}" else s"${ANSI_RED}Négatif 🫤${ANSI_RESET}"
+
+      // Construct probability message with colors
+      val probabilityMessage = s"${ANSI_BOLD}Probabilité Positif:${ANSI_RESET} ${formattedProbability(1)}, ${ANSI_BOLD}Négatif:${ANSI_RESET} ${formattedProbability(0)}"
+
+      println(s"${ANSI_BOLD}ItemID:${ANSI_RESET} $itemID")
+      println(s"${ANSI_BOLD}Texte prétraité:${ANSI_RESET} $preprocessed")
+      println(probabilityMessage)
+      println(s"${ANSI_BOLD}Prédiction:${ANSI_RESET} $predictionLabel")
+      println()
+    }
+  }
+
+  def generateSentimentDistributionChart(predictions: Array[org.apache.spark.sql.Row]): Unit = {
+    // Create a dataset
+    val dataset = new DefaultCategoryDataset()
+
+    // Count positive and negative predictions
+    var positiveCount = 0
+    var negativeCount = 0
+    predictions.foreach { row =>
+      val prediction = row.getAs[Double]("prediction")
+      if (prediction == 1.0) {
+        positiveCount += 1
+      } else {
+        negativeCount += 1
+      }
+    }
+
+    // Add data to the dataset
+    dataset.addValue(positiveCount, "Sentiment", "Positive")
+    dataset.addValue(negativeCount, "Sentiment", "Negative")
+
+    // Create the chart
+    val chart = ChartFactory.createBarChart(
+      "Sentiment Distribution", // Chart title
+      "Sentiment", // X-axis label
+      "Count", // Y-axis label
+      dataset, // Dataset
+      PlotOrientation.VERTICAL,
+      true, true, false)
+
+    // Display the chart in a frame
+    val frame = new JFrame("Sentiment Distribution")
+    frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
+    val chartPanel = new ChartPanel(chart)
+    frame.setContentPane(chartPanel)
+    frame.pack()
+    frame.setVisible(true)
+  }
+
 }
