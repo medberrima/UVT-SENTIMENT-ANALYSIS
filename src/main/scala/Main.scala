@@ -181,9 +181,9 @@ object TwitterSentimentAnalysis  {
       .select("ItemID","Preprocessed", "probability", "prediction")
       .collect()
 
-    // printPredictions(predictions)
+    printPredictions(predictions)
 
-    // generateSentimentDistributionChart(predictions)
+    generateSentimentDistributionChart(predictions)
 
 
     println("---------------------------------")
